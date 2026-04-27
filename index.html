@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACHS — Empadronamiento Nacional | Dashboard de Avance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:     #0B2545;
+    --navy-mid: #1A3A6B;
+    --blue:     #1D5FA6;
+    --blue-lt:  #3A82D4;
+    --accent:   #E8A020;
+    --accent-lt:#FFC85A;
+    --bg:       #F2F4F8;
+    --surface:  #FFFFFF;
+    --border:   #D5DCE8;
+    --text:     #1A2540;
+    --text-2:   #4A5878;
+    --text-3:   #8A98B4;
+    --green:    #1B7A4E;
+    --green-lt: #E6F5EE;
+    --red:      #B53A2A;
+    --red-lt:   #FDECEA;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ─── LAYOUT ─── */
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+  }
+
+  /* ─── BANNER ─── */
+  .banner {
+    background: var(--navy);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 22px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: stretch;
+  }
+
+  .banner-logo {
+    padding: 20px 24px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+  }
+
+  .banner-logo img {
+    height: 66px;
+    width: auto;
+    display: block;
+    background: #fff;
+    border-radius: 10px;
+    padding: 5px 10px;
+  }
+  .banner-news-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    letter-spacing: 0.03em;
+    transition: background 0.15s;
+    width: fit-content;
+  }
+  .banner-news-btn:hover {
+    background: rgba(255,255,255,0.16);
+    color: #fff;
+  }
+
+  .banner-body {
+    padding: 20px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .banner-tag {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-lt);
+    margin-bottom: 5px;
+  }
+
+  .banner-title {
+    font-size: 19px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .banner-sub {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.4;
+  }
+
+  .banner-stats {
+    display: flex;
+    border-left: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .bstat {
+    padding: 20px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .bstat:last-child { border-right: none; }
+
+  .bstat-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 4px;
+  }
+
+  .bstat-val {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .bstat-val.accent { color: var(--accent-lt); }
+
+  .bstat-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 3px;
+  }
+
+  /* ─── KPI STRIP ─── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+
+  .kpi-label {
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 8px;
+  }
+
+  .kpi-num {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 5px;
+  }
+
+  .kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .kpi-badge.up   { background: var(--green-lt); color: var(--green); }
+  .kpi-badge.down { background: var(--red-lt);   color: var(--red); }
+  .kpi-badge.neu  { background: #EEF1F8;          color: var(--text-2); }
+
+  /* ─── TWO-COL GRID ─── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .grid-31 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 4px;
+  }
+
+  .card-sub {
+    font-size: 11.5px;
+    color: var(--text-3);
+    margin-bottom: 16px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-2);
+  }
+
+  .leg-sq {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .leg-line {
+    width: 18px; height: 2px;
+    border-radius: 1px;
+    border-top: 2px dashed;
+    flex-shrink: 0;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .big-progress-wrap {
+    margin: 8px 0 18px;
+  }
+
+  .big-progress-track {
+    width: 100%;
+    height: 10px;
+    background: var(--bg);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .big-progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--blue);
+    transition: width 1s ease;
+  }
+
+  .big-progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 5px;
+  }
+
+  /* ─── REGION TABLE ─── */
+  .rtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .rtable thead th {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 0 10px 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .rtable thead th:first-child { text-align: left; }
+
+  .rtable tbody td {
+    padding: 7px 10px 7px 0;
+    border-bottom: 1px solid #EEF1F7;
+    color: var(--text);
+    vertical-align: middle;
+    text-align: right;
+  }
+
+  .rtable tbody td:first-child {
+    text-align: left;
+    font-size: 11.5px;
+    color: var(--text-2);
+  }
+
+  .rtable tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .rtable tfoot td {
+    font-weight: 600;
+    font-size: 12.5px;
+    padding: 9px 10px 0 0;
+    border-top: 1.5px solid var(--navy);
+    color: var(--text);
+    text-align: right;
+  }
+
+  .rtable tfoot td:first-child { text-align: left; }
+
+  .mono { font-family: var(--mono); font-size: 11.5px; }
+
+  .pct-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    min-width: 46px;
+    text-align: center;
+  }
+
+  .pct-hi  { background: #E6F5EE; color: #1B7A4E; }
+  .pct-mid { background: #FFF4E0; color: #905810; }
+  .pct-lo  { background: var(--red-lt); color: var(--red); }
+
+  /* ─── MINI BAR ─── */
+  .mbar-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .mbar-track {
+    width: 52px;
+    height: 5px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .mbar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--blue);
+  }
+
+  /* ─── DATE SELECTOR ─── */
+  .date-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .date-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .date-tab:hover { border-color: var(--blue); color: var(--blue); }
+  .date-tab.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #fff;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ═══ BANNER ═══ -->
+  <div class="banner">
+    <div class="banner-logo">
+      <img src="data:image/png;base64,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" alt="Centro UC — Encuestas y Estudios Longitudinales">
+    </div>
+    <div class="banner-body">
+      <div class="banner-tag">Proyecto ACHS · Terreno nacional</div>
+      <div class="banner-title">Empadronamiento Nacional</div>
+      <div class="banner-sub">Termómetro de la Salud Mental en Chile &nbsp;·&nbsp; Seguimiento de avance en campo</div>
+      <a class="banner-news-btn" href="https://encuestas.uc.cl/?p=2831" target="_blank">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6.5 1H11M11 1V5.5M11 1L5 7M2 3H4.5M2 3V10H9V7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Ver nota del proyecto
+      </a>
+    </div>
+    <div class="banner-stats">
+      <div class="bstat">
+        <div class="bstat-label">Muestra total</div>
+        <div class="bstat-val">713</div>
+        <div class="bstat-sub">manzanas</div>
+      </div>
+      <div class="bstat">
+        <div class="bstat-label">Última medición</div>
+        <div class="bstat-val accent">76,6%</div>
+        <div class="bstat-sub">23 de abril 2026</div>
+      </div>
+      <div class="bstat">
+        <div class="bstat-label">Días en terreno</div>
+        <div class="bstat-val">24</div>
+        <div class="bstat-sub">30 mar — 23 abr</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ KPI STRIP ═══ -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-label">Completos (último)</div>
+      <div class="kpi-num">546</div>
+      <span class="kpi-badge neu">código 110</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">% Completitud</div>
+      <div class="kpi-num">76,6%</div>
+      <span class="kpi-badge up">▲ +27 pts desde inicio</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Máximo alcanzado</div>
+      <div class="kpi-num">570</div>
+      <span class="kpi-badge neu">20 abr · 81,5%</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Pendientes (último)</div>
+      <div class="kpi-num">96</div>
+      <span class="kpi-badge neu">código 510</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Por entregar (último)</div>
+      <div class="kpi-num">2</div>
+      <span class="kpi-badge neu">código 520</span>
+    </div>
+  </div>
+
+  <!-- ═══ CHART 1 — LÍNEA ACUMULADA ═══ -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Avance acumulado de completos</div>
+    <div class="card-sub">Evolución de manzanas completas (código 110) respecto al total de 713</div>
+
+    <!-- Barra de progreso global -->
+    <div class="big-progress-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <span style="font-size:11px;color:var(--text-2);font-weight:500;">Progreso global al 23 abr</span>
+        <span style="font-family:var(--mono);font-size:13px;color:var(--blue);font-weight:500;">546 / 713 &nbsp;·&nbsp; 76,6%</span>
+      </div>
+      <div class="big-progress-track">
+        <div class="big-progress-fill" style="width:76.6%;"></div>
+      </div>
+      <div class="big-progress-labels">
+        <span>0</span><span>178</span><span>356</span><span>534</span><span>713</span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="leg-item"><span class="leg-sq" style="background:#1D5FA6;"></span>Completos</span>
+      <span class="leg-item"><span class="leg-sq" style="background:#E8A020;opacity:.7;"></span>Pico máximo</span>
+      <span class="leg-item">
+        <span class="leg-line" style="border-color:#8A98B4;"></span>
+        Meta total (713)
+      </span>
+    </div>
+
+    <div style="position:relative;width:100%;height:230px;">
+      <canvas id="lineChart" role="img" aria-label="Gráfico de línea con el avance acumulado de manzanas completas desde el 30 de marzo al 23 de abril de 2026.">Datos: 354, 365, 381, 418, 428, 500, 520, 570, 546 sobre una meta de 713.</canvas>
+    </div>
+  </div>
+
+  <!-- ═══ CHARTS 2 y 3 EN GRID ═══ -->
+  <div class="grid-2">
+
+    <!-- Barras de delta -->
+    <div class="card">
+      <div class="card-title">Nuevos completos por fecha</div>
+      <div class="card-sub">Incremento neto respecto a medición anterior</div>
+      <div style="position:relative;width:100%;height:220px;">
+        <canvas id="deltaChart" role="img" aria-label="Gráfico de barras con el incremento de nuevos completos por fecha.">Incrementos: 354, +11, +16, +37, +10, +72, +20, +50, −24.</canvas>
+      </div>
+    </div>
+
+    <!-- Tabla de fechas comparadas -->
+    <div class="card">
+      <div class="card-title">Resumen por fecha de medición</div>
+      <div class="card-sub">Completos acumulados y variación</div>
+      <table class="rtable" style="margin-top:4px;">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Completos</th>
+            <th>%</th>
+            <th>Δ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">30 mar</td>
+            <td class="mono">354</td>
+            <td><span class="pct-pill pct-lo">49,6%</span></td>
+            <td class="mono" style="color:var(--text-3)">—</td>
+          </tr>
+          <tr>
+            <td class="mono">31 mar</td>
+            <td class="mono">365</td>
+            <td><span class="pct-pill pct-lo">51,2%</span></td>
+            <td class="mono" style="color:var(--green)">+11</td>
+          </tr>
+          <tr>
+            <td class="mono">02 abr</td>
+            <td class="mono">381</td>
+            <td><span class="pct-pill pct-lo">53,4%</span></td>
+            <td class="mono" style="color:var(--green)">+16</td>
+          </tr>
+          <tr>
+            <td class="mono">07 abr</td>
+            <td class="mono">418</td>
+            <td><span class="pct-pill pct-mid">58,6%</span></td>
+            <td class="mono" style="color:var(--green)">+37</td>
+          </tr>
+          <tr>
+            <td class="mono">08 abr</td>
+            <td class="mono">428</td>
+            <td><span class="pct-pill pct-mid">60,0%</span></td>
+            <td class="mono" style="color:var(--green)">+10</td>
+          </tr>
+          <tr>
+            <td class="mono">14 abr</td>
+            <td class="mono">500</td>
+            <td><span class="pct-pill pct-mid">70,1%</span></td>
+            <td class="mono" style="color:var(--green)">+72</td>
+          </tr>
+          <tr>
+            <td class="mono">16 abr</td>
+            <td class="mono">520</td>
+            <td><span class="pct-pill pct-mid">72,9%</span></td>
+            <td class="mono" style="color:var(--green)">+20</td>
+          </tr>
+          <tr>
+            <td class="mono">20 abr</td>
+            <td class="mono">570</td>
+            <td><span class="pct-pill pct-hi">81,5%</span></td>
+            <td class="mono" style="color:var(--green)">+50</td>
+          </tr>
+          <tr>
+            <td class="mono">23 abr</td>
+            <td class="mono">546</td>
+            <td><span class="pct-pill pct-mid">76,6%</span></td>
+            <td class="mono" style="color:var(--red)">−24</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ═══ TABLA REGIONAL ═══ -->
+  <div class="card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
+      <div class="card-title">Detalle por región — última medición</div>
+      <div id="region-date-label" style="font-size:11px;color:var(--text-3);font-family:var(--mono);">23 abr 2026</div>
+    </div>
+    <div class="card-sub">Seleccionar fecha para ver distribución histórica por región</div>
+
+    <div class="date-tabs" id="dateTabs">
+      <button class="date-tab" onclick="showRegion(0)">30 mar</button>
+      <button class="date-tab" onclick="showRegion(1)">31 mar</button>
+      <button class="date-tab" onclick="showRegion(2)">02 abr</button>
+      <button class="date-tab" onclick="showRegion(3)">07 abr</button>
+      <button class="date-tab" onclick="showRegion(4)">08 abr</button>
+      <button class="date-tab" onclick="showRegion(5)">14 abr</button>
+      <button class="date-tab" onclick="showRegion(6)">16 abr</button>
+      <button class="date-tab" onclick="showRegion(7)">20 abr</button>
+      <button class="date-tab active" onclick="showRegion(8)">23 abr</button>
+    </div>
+
+    <table class="rtable" id="regionTable">
+      <thead>
+        <tr>
+          <th style="width:32%">Región</th>
+          <th>Total</th>
+          <th>Completos</th>
+          <th>Parciales</th>
+          <th>Pendientes</th>
+          <th>Por entregar</th>
+          <th>% Complet.</th>
+        </tr>
+      </thead>
+      <tbody id="regionTbody"></tbody>
+      <tfoot id="regionTfoot"></tfoot>
+    </table>
+  </div>
+
+  <div class="footer">
+    Dashboard de avance en terreno &nbsp;·&nbsp; Centro UC de Encuestas y Estudios Longitudinales &nbsp;·&nbsp;
+    <a href="https://encuestas.uc.cl/?p=2831" target="_blank">Ver nota del proyecto</a>
+  </div>
+
+</div>
+
+<script>
+/* ─── DATOS ─── */
+const DATES = ['30 mar','31 mar','02 abr','07 abr','08 abr','14 abr','16 abr','20 abr','23 abr'];
+const COMPLETOS = [354,365,381,418,428,500,520,570,546];
+const TOTAL = 713;
+
+/* Datos por región para cada fecha:
+   [total, completos, parciales, pendientes, porEntregar] */
+const REGIONES = [
+  { cod:'1',  nom:'Tarapacá',                   data:[[26,24,0,0,2],[26,24,0,0,2],[26,24,0,0,2],[26,24,0,0,2],[26,24,0,0,2],[26,24,0,0,2],[26,24,0,0,2],[24,24,0,0,0],[26,24,0,0,2]] },
+  { cod:'2',  nom:'Antofagasta',                data:[[48,22,1,4,21],[48,24,1,2,21],[48,24,1,2,21],[48,26,1,0,21],[48,26,1,0,21],[48,26,1,0,21],[48,31,1,16,0],[48,34,1,13,0],[48,41,1,6,0]] },
+  { cod:'3',  nom:'Atacama',                    data:[[22,18,0,4,0],[22,18,0,4,0],[22,18,0,4,0],[22,18,0,4,0],[22,18,0,4,0],[22,18,0,4,0],[22,21,1,0,0],[22,21,1,0,0],[22,21,1,0,0]] },
+  { cod:'4',  nom:'Coquimbo',                   data:[[54,52,0,0,2],[54,52,0,0,2],[54,52,0,0,2],[54,52,0,0,2],[54,52,0,0,2],[54,52,0,0,2],[54,52,0,0,2],[52,52,0,0,0],[54,52,0,0,0]] },
+  { cod:'5',  nom:'Valparaíso',                 data:[[57,38,1,15,3],[57,40,1,14,2],[57,40,1,14,2],[57,44,1,12,0],[57,46,1,10,0],[57,46,1,10,0],[57,48,1,8,0],[57,48,1,8,0],[57,48,1,8,0]] },
+  { cod:'6',  nom:'Lib. Gral. B. O\'Higgins',  data:[[28,23,0,0,5],[28,23,0,0,5],[28,23,0,4,1],[28,23,0,4,1],[28,23,0,4,1],[28,23,0,4,1],[28,23,0,4,1],[27,27,0,0,0],[28,26,0,1,0]] },
+  { cod:'7',  nom:'Maule',                      data:[[37,17,1,8,11],[37,21,0,16,0],[37,32,0,5,0],[37,36,0,1,0],[37,36,0,1,0],[37,36,0,1,0],[37,36,0,1,0],[37,36,0,1,0],[37,36,0,1,0]] },
+  { cod:'8',  nom:'Biobío',                     data:[[58,17,2,32,7],[58,17,2,32,7],[58,19,2,30,7],[58,19,1,31,7],[58,19,1,31,7],[58,19,2,30,7],[58,30,0,19,7],[55,40,0,9,0],[58,40,0,9,0]] },
+  { cod:'9',  nom:'La Araucanía',               data:[[35,15,0,0,20],[35,15,0,0,20],[35,15,0,0,20],[35,15,0,0,20],[35,15,0,0,20],[35,15,0,19,1],[35,15,0,19,1],[34,23,0,11,0],[35,21,0,13,0]] },
+  { cod:'10', nom:'Los Lagos',                  data:[[23,3,0,17,3],[23,3,0,17,3],[23,3,0,17,3],[23,3,0,17,3],[23,3,0,17,3],[23,3,0,17,3],[23,11,0,11,1],[22,11,0,11,0],[23,11,0,11,0]] },
+  { cod:'11', nom:'Aysén del Gral. C. Ibáñez',  data:[[6,0,0,0,6],[6,0,0,0,6],[6,0,0,3,3],[6,2,0,1,3],[6,3,0,0,3],[6,3,0,0,3],[6,3,0,0,3],[3,3,0,0,0],[6,3,0,0,3]] },
+  { cod:'12', nom:'Magallanes y Antártica',      data:[[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,2],[9,7,0,0,0]] },
+  { cod:'13', nom:'Metropolitana de Santiago',   data:[[265,81,5,39,140],[265,82,5,74,104],[265,82,5,74,104],[265,107,3,70,85],[265,114,3,76,72],[265,114,3,76,72],[265,157,6,59,43],[265,171,6,48,40],[265,174,6,45,0]] },
+  { cod:'14', nom:'Los Ríos',                    data:[[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0],[12,10,0,2,0]] },
+  { cod:'15', nom:'Arica y Parinacota',          data:[[17,16,0,0,1],[17,16,0,0,1],[17,16,0,0,1],[17,16,0,0,1],[17,16,0,0,1],[17,16,0,0,1],[17,16,0,0,1],[16,16,0,0,0],[17,16,0,0,1]] },
+  { cod:'16', nom:'Ñuble',                       data:[[16,11,0,5,0],[16,13,0,3,0],[16,16,0,0,0],[16,16,0,0,0],[16,16,0,0,0],[16,16,0,0,0],[16,16,0,0,0],[16,16,0,0,0],[16,16,0,0,0]] },
+];
+
+/* ─── COLOR ─── */
+const BLUE = '#1D5FA6';
+const BLUE_ALT = '#3A82D4';
+const ACCENT = '#E8A020';
+const RED = '#B53A2A';
+const GRID = 'rgba(26,37,64,0.07)';
+const LABEL = '#8A98B4';
+
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = LABEL;
+
+/* ─── CHART 1: LÍNEA ─── */
+const deltas = COMPLETOS.map((v,i) => i===0 ? v : v - COMPLETOS[i-1]);
+const pointColors = COMPLETOS.map((v,i) => v === Math.max(...COMPLETOS) ? ACCENT : BLUE);
+
+new Chart(document.getElementById('lineChart'), {
+  type: 'line',
+  data: {
+    labels: DATES,
+    datasets: [
+      {
+        label: 'Meta (713)',
+        data: Array(DATES.length).fill(TOTAL),
+        borderColor: '#C5CEDF',
+        borderWidth: 1.5,
+        borderDash: [6, 3],
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+        order: 2,
+      },
+      {
+        label: 'Completos',
+        data: COMPLETOS,
+        borderColor: BLUE,
+        borderWidth: 2.5,
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0,0,0,220);
+          g.addColorStop(0, 'rgba(29,95,166,0.18)');
+          g.addColorStop(1, 'rgba(29,95,166,0.01)');
+          return g;
+        },
+        fill: true,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.35,
+        order: 1,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode:'index', intersect:false },
+    plugins: {
+      legend: { display:false },
+      tooltip: {
+        backgroundColor:'#0B2545',
+        titleColor:'rgba(255,255,255,0.7)',
+        bodyColor:'#fff',
+        padding:10,
+        cornerRadius:8,
+        callbacks: {
+          label: (ctx) => {
+            if (ctx.datasetIndex===0) return '  Meta: 713';
+            const v = ctx.raw;
+            return `  Completos: ${v}  (${(v/TOTAL*100).toFixed(1)}%)`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid:{ color:GRID }, ticks:{ maxRotation:0 } },
+      y: {
+        min: 300,
+        max: 750,
+        grid:{ color:GRID },
+        ticks:{
+          callback: (v) => v === 713 ? '713 ←' : v
+        }
+      }
+    }
+  }
+});
+
+/* ─── CHART 2: BARRAS DELTA ─── */
+const deltaColors = deltas.map(v => v < 0 ? '#B53A2A' : (v >= 50 ? '#1B7A4E' : BLUE));
+
+new Chart(document.getElementById('deltaChart'), {
+  type: 'bar',
+  data: {
+    labels: DATES,
+    datasets: [{
+      label: 'Nuevos completos',
+      data: deltas,
+      backgroundColor: deltaColors,
+      borderRadius: 5,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display:false },
+      tooltip: {
+        backgroundColor:'#0B2545',
+        titleColor:'rgba(255,255,255,0.7)',
+        bodyColor:'#fff',
+        padding:10,
+        cornerRadius:8,
+        callbacks: {
+          label: (ctx) => {
+            const v = ctx.raw;
+            return `  ${v >= 0 ? '+' : ''}${v} manzanas`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid:{ display:false }, ticks:{ maxRotation:0 } },
+      y: { grid:{ color:GRID } }
+    }
+  }
+});
+
+/* ─── TABLA REGIONAL ─── */
+function pctPill(pct) {
+  const cls = pct >= 80 ? 'pct-hi' : pct >= 60 ? 'pct-mid' : 'pct-lo';
+  return `<span class="pct-pill ${cls}">${pct.toFixed(1)}%</span>`;
+}
+
+function mbar(pct) {
+  return `<div class="mbar-wrap"><div class="mbar-track"><div class="mbar-fill" style="width:${Math.min(pct,100)}%"></div></div></div>`;
+}
+
+function showRegion(idx) {
+  document.querySelectorAll('.date-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  const lbl = document.getElementById('region-date-label');
+  lbl.textContent = DATES[idx] + ' 2026';
+
+  const tbody = document.getElementById('regionTbody');
+  const tfoot = document.getElementById('regionTfoot');
+
+  let totalT=0, totalC=0, totalPar=0, totalPend=0, totalPE=0;
+  let rows = '';
+
+  REGIONES.forEach(r => {
+    const [tot, comp, par, pend, pe] = r.data[idx];
+    const pct = tot > 0 ? comp/tot*100 : 0;
+    totalT+=tot; totalC+=comp; totalPar+=par; totalPend+=pend; totalPE+=pe;
+    rows += `<tr>
+      <td>${r.cod}. ${r.nom}</td>
+      <td class="mono">${tot}</td>
+      <td class="mono">${comp}</td>
+      <td class="mono">${par}</td>
+      <td class="mono">${pend}</td>
+      <td class="mono">${pe}</td>
+      <td>${pctPill(pct)}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows;
+
+  const totalPct = totalT > 0 ? totalC/totalT*100 : 0;
+  tfoot.innerHTML = `<tr>
+    <td>TOTAL</td>
+    <td class="mono">${totalT}</td>
+    <td class="mono">${totalC}</td>
+    <td class="mono">${totalPar}</td>
+    <td class="mono">${totalPend}</td>
+    <td class="mono">${totalPE}</td>
+    <td>${pctPill(totalPct)}</td>
+  </tr>`;
+}
+
+showRegion(8);
+</script>
+</body>
+</html>
