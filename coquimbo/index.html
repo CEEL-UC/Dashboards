@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coquimbo — Encuesta Longitudinal | Dashboard de Avance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0b1220;
+      --bg2:       #111c2e;
+      --bg3:       #172035;
+      --border:    #1e2f48;
+      --blue:      #0891b2;
+      --blue-mid:  #0e7490;
+      --blue-lite: #22d3ee;
+      --accent:    #67e8f9;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --dim:       #475569;
+      --green:     #34d399;
+      --red:       #f87171;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .back-link { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 5px; transition: color .15s; }
+    .back-link:hover { color: var(--accent); text-decoration: none; }
+    .header-divider { width: 1px; height: 32px; background: var(--border); }
+    header img.logo { height: 38px; filter: brightness(0) invert(1); }
+    .header-meta { margin-left: auto; text-align: right; }
+    .header-meta .proj { font-size: .78rem; color: var(--muted); }
+    .header-meta .name { font-size: .95rem; font-weight: 600; color: var(--text); }
+
+    .hero-band {
+      background: linear-gradient(135deg, #062230 0%, #0b1220 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 32px 28px;
+      position: relative; overflow: hidden;
+    }
+    .hero-band::before {
+      content: '';
+      position: absolute; top: -40px; right: -60px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(8,145,178,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .hero-band h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+    .hero-band .subtitle { font-size: .88rem; color: var(--muted); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; padding: 24px 32px; }
+    .kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+    .kpi-label { font-size: .7rem; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.85rem; font-weight: 600; line-height: 1; }
+    .kpi-val.teal   { color: var(--accent); }
+    .kpi-val.green  { color: var(--green); }
+    .kpi-val.muted  { color: var(--muted); }
+    .kpi-sub { font-size: .73rem; color: var(--dim); margin-top: 6px; }
+
+    .charts { padding: 0 32px 32px; display: flex; flex-direction: column; gap: 24px; }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; }
+    .chart-card h3 { font-size: .88rem; font-weight: 600; margin-bottom: 4px; }
+    .chart-card .chart-sub { font-size: .75rem; color: var(--muted); margin-bottom: 18px; }
+
+    .progress-wrap { margin: 4px 0 12px; }
+    .progress-bar-bg { background: var(--bg3); border-radius: 100px; height: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .progress-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--blue-mid), var(--accent)); transition: width .6s ease; }
+    .progress-labels { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--muted); margin-top: 6px; }
+
+    .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin: 0 32px 30px; }
+    .table-card h3 { font-size: .88rem; font-weight: 600; padding: 18px 22px 0; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th { background: var(--bg3); color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-size: .68rem; font-weight: 600; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 16px; border-bottom: 1px solid rgba(30,47,72,.5); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(8,145,178,.05); }
+    .td-date { font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
+    .td-val  { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent); }
+    .td-pct  { font-family: 'IBM Plex Mono', monospace; }
+    .delta-pos { color: var(--green); }
+    .delta-neg { color: var(--red); }
+    .delta-neu { color: var(--dim); }
+    .pct-bar { display: flex; align-items: center; gap: 8px; }
+    .mini-bar-bg { flex: 1; height: 6px; background: var(--bg3); border-radius: 100px; overflow: hidden; border: 1px solid var(--border); }
+    .mini-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--blue-mid), var(--accent)); }
+
+    footer { border-top: 1px solid var(--border); text-align: center; padding: 18px; font-size: .75rem; color: var(--dim); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="back-link" href="../index.html">← Volver al compendio</a>
+    <div class="header-divider"></div>
+    <img class="logo" src="https://ceel-uc.github.io/Dashboards/logo_ceel.png" alt="CEEL UC" />
+    <div class="header-meta">
+      <div class="proj">Región de Coquimbo · Terreno longitudinal</div>
+      <div class="name">Encuesta Longitudinal de Coquimbo</div>
+    </div>
+  </header>
+
+  <div class="hero-band">
+    <p class="hero-label">Seguimiento de avance en campo</p>
+    <h1>Encuesta Longitudinal de Coquimbo</h1>
+    <p class="subtitle">Evolución de encuestas completadas respecto al total de 4.330 encuestas · múltiples comunas</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Muestra total</div>
+      <div class="kpi-val muted">4.330</div>
+      <div class="kpi-sub">encuestas únicas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Última medición</div>
+      <div class="kpi-val teal">22,4%</div>
+      <div class="kpi-sub">20 de abril 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Completadas (último)</div>
+      <div class="kpi-val teal">969</div>
+      <div class="kpi-sub">código 110</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Días en terreno</div>
+      <div class="kpi-val muted">26</div>
+      <div class="kpi-sub">25 mar — 20 abr</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Máximo alcanzado</div>
+      <div class="kpi-val green">22,4%</div>
+      <div class="kpi-sub">20 abr · 969 comp.</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Variación total</div>
+      <div class="kpi-val green">+5,5 pts</div>
+      <div class="kpi-sub">desde 25 mar (16,9%)</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <h3>Avance acumulado de completadas</h3>
+      <p class="chart-sub">Evolución de encuestas completadas (código 110) respecto al total de 4.330</p>
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:22.4%"></div>
+        </div>
+        <div class="progress-labels">
+          <span>Progreso global al 20 abr — <strong style="color:var(--accent)">969 / 4.330 · 22,4%</strong></span>
+          <span>Meta: 4.330</span>
+        </div>
+      </div>
+      <canvas id="chartAcum" height="90"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Nuevas completadas por fecha</h3>
+      <p class="chart-sub">Incremento neto respecto a la medición anterior</p>
+      <canvas id="chartDelta" height="90"></canvas>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Resumen por fecha de medición</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total ID</th>
+          <th>Completadas</th>
+          <th>%</th>
+          <th>Δ comp.</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHistorica"></tbody>
+    </table>
+  </div>
+
+  <div class="table-card" style="margin-top:0">
+    <h3>Detalle por carga — última medición (20 abr 2026)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Carga</th>
+          <th>Total ID</th>
+          <th>Completadas</th>
+          <th>% Completitud</th>
+        </tr>
+      </thead>
+      <tbody id="tablaCargas"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Dashboard de avance en terreno · Centro UC de Encuestas y Estudios Longitudinales
+  </footer>
+
+<script>
+const historia = [
+  { fecha: '25 mar', total: 2655, comp: 448, pct: 16.9 },
+  { fecha: '26 mar', total: 2736, comp: 479, pct: 17.5 },
+  { fecha: '31 mar', total: 2869, comp: 587, pct: 20.5 },
+  { fecha: '01 abr', total: 2892, comp: 604, pct: 20.9 },
+  { fecha: '02 abr', total: 2903, comp: 618, pct: 21.3 },
+  { fecha: '07 abr', total: 2927, comp: 666, pct: 22.8 },
+  { fecha: '08 abr', total: 2927, comp: 686, pct: 23.4 },
+  { fecha: '09 abr', total: 3646, comp: 703, pct: 19.3 },
+  { fecha: '14 abr', total: 4330, comp: 841, pct: 19.4 },
+  { fecha: '16 abr', total: 4330, comp: 904, pct: 20.9 },
+  { fecha: '20 abr', total: 4330, comp: 969, pct: 22.4 },
+];
+
+const cargas = [
+  { nombre: 'C1 — La Serena + Coquimbo', total: 1467, comp: 279 },
+  { nombre: 'C2 — 9 comunas',             total: 1520, comp: 410 },
+  { nombre: 'C3',                          total:  659, comp: 148 },
+  { nombre: 'C4',                          total:  684, comp:  16 },
+];
+
+// Tabla histórica
+const tbody = document.getElementById('tablaHistorica');
+historia.forEach((d, i) => {
+  const prev  = i > 0 ? historia[i-1].comp : null;
+  const delta = prev !== null ? d.comp - prev : null;
+  const dClass = delta === null ? 'delta-neu' : delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-neu';
+  const dStr   = delta === null ? '—' : (delta > 0 ? '+' : '') + delta;
+  tbody.innerHTML += `
+    <tr>
+      <td class="td-date">${d.fecha}</td>
+      <td>${d.total.toLocaleString('es-CL')}</td>
+      <td class="td-val">${d.comp.toLocaleString('es-CL')}</td>
+      <td class="td-pct">${d.pct.toFixed(1)}%</td>
+      <td class="${dClass}">${dStr}</td>
+    </tr>`;
+});
+
+// Tabla cargas
+const tbodyC = document.getElementById('tablaCargas');
+cargas.forEach(c => {
+  const pct = (c.comp / c.total * 100).toFixed(1);
+  tbodyC.innerHTML += `
+    <tr>
+      <td>${c.nombre}</td>
+      <td>${c.total.toLocaleString('es-CL')}</td>
+      <td class="td-val">${c.comp.toLocaleString('es-CL')}</td>
+      <td>
+        <div class="pct-bar">
+          <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--accent);min-width:42px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+});
+
+// Charts
+const labels = historia.map(d => d.fecha);
+const META = 4330;
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'Inter';
+
+new Chart(document.getElementById('chartAcum'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Completadas',
+        data: historia.map(d => d.comp),
+        borderColor: '#67e8f9',
+        backgroundColor: 'rgba(103,232,249,.08)',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#67e8f9',
+        pointRadius: 4,
+        tension: .35,
+        fill: true,
+      },
+      {
+        label: 'Meta total (4.330)',
+        data: historia.map(() => META),
+        borderColor: 'rgba(71,85,105,.5)',
+        borderWidth: 1.5,
+        borderDash: [6,4],
+        pointRadius: 0,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#111c2e', borderColor: '#1e2f48', borderWidth: 1 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } }, min: 0, max: META + 300 }
+    }
+  }
+});
+
+const deltas = historia.map((d, i) => i === 0 ? d.comp : d.comp - historia[i-1].comp);
+new Chart(document.getElementById('chartDelta'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Nuevas completadas',
+      data: deltas,
+      backgroundColor: deltas.map(v => v >= 0 ? 'rgba(103,232,249,.65)' : 'rgba(248,113,113,.7)'),
+      borderColor:      deltas.map(v => v >= 0 ? '#67e8f9' : '#f87171'),
+      borderWidth: 1.5,
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#111c2e', borderColor: '#1e2f48', borderWidth: 1 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
