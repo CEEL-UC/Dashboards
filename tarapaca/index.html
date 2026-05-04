@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarapacá — Encuesta Longitudinal | Dashboard de Avance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0b1220;
+      --bg2:       #111c2e;
+      --bg3:       #172035;
+      --border:    #1e2f48;
+      --blue:      #7c3aed;
+      --blue-mid:  #6d28d9;
+      --blue-lite: #a78bfa;
+      --accent:    #c4b5fd;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --dim:       #475569;
+      --green:     #34d399;
+      --red:       #f87171;
+      --red-bg:    rgba(248,113,113,.08);
+      --red-border: rgba(248,113,113,.25);
+      --amber:     #fbbf24;
+      --amber-bg:  rgba(251,191,36,.08);
+      --amber-border: rgba(251,191,36,.25);
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .back-link { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 5px; transition: color .15s; }
+    .back-link:hover { color: var(--accent); text-decoration: none; }
+    .header-divider { width: 1px; height: 32px; background: var(--border); }
+    header img.logo { height: 38px; filter: brightness(0) invert(1); }
+    .header-meta { margin-left: auto; text-align: right; display: flex; align-items: center; gap: 16px; }
+    .header-meta-text { text-align: right; }
+    .header-meta .proj { font-size: .78rem; color: var(--muted); }
+    .header-meta .name { font-size: .95rem; font-weight: 600; color: var(--text); }
+    .btn-proyecto {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 8px;
+      background: rgba(196,181,253,.1); border: 1px solid rgba(196,181,253,.3);
+      color: var(--accent); font-size: .78rem; font-weight: 500;
+      text-decoration: none; white-space: nowrap;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-proyecto:hover { background: rgba(196,181,253,.18); border-color: rgba(196,181,253,.5); text-decoration: none; }
+
+    .hero-band {
+      background: linear-gradient(135deg, #1e1040 0%, #0b1220 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 32px 28px;
+      position: relative; overflow: hidden;
+    }
+    .hero-band::before {
+      content: '';
+      position: absolute; top: -40px; right: -60px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(124,58,237,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .hero-band h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+    .hero-band .subtitle { font-size: .88rem; color: var(--muted); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 14px; padding: 24px 32px; }
+    .kpi {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px; position: relative;
+    }
+    .kpi.kpi-danger {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+    }
+    .kpi.kpi-warn {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+    }
+    .kpi-label { font-size: .7rem; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.85rem; font-weight: 600; line-height: 1; }
+    .kpi-val.purple { color: var(--accent); }
+    .kpi-val.green  { color: var(--green); }
+    .kpi-val.red    { color: var(--red); }
+    .kpi-val.amber  { color: var(--amber); }
+    .kpi-val.muted  { color: var(--muted); }
+    .kpi-sub { font-size: .73rem; color: var(--dim); margin-top: 6px; }
+
+    /* Tooltip info bubble */
+    .info-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px;
+      background: var(--dim); border-radius: 50%;
+      font-size: .6rem; font-weight: 700; color: var(--bg);
+      cursor: help; flex-shrink: 0;
+      position: relative;
+    }
+    .info-btn::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #1e2f48; color: var(--text);
+      font-size: .72rem; font-weight: 400; font-family: 'Inter', sans-serif;
+      white-space: normal; width: 220px;
+      padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--border);
+      pointer-events: none; opacity: 0;
+      transition: opacity .2s; z-index: 100;
+      text-transform: none; letter-spacing: 0;
+    }
+    .info-btn:hover::after { opacity: 1; }
+
+    .charts { padding: 0 32px 32px; display: flex; flex-direction: column; gap: 24px; }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; }
+    .chart-card h3 { font-size: .88rem; font-weight: 600; margin-bottom: 4px; }
+    .chart-card .chart-sub { font-size: .75rem; color: var(--muted); margin-bottom: 18px; }
+
+    .progress-wrap { margin: 4px 0 12px; }
+    .progress-bar-bg { background: var(--bg3); border-radius: 100px; height: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .progress-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--blue-mid), var(--accent)); transition: width .6s ease; }
+    .progress-labels { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--muted); margin-top: 6px; }
+
+    .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin: 0 32px 30px; }
+    .table-card h3 { font-size: .88rem; font-weight: 600; padding: 18px 22px 0; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th { background: var(--bg3); color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-size: .68rem; font-weight: 600; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 16px; border-bottom: 1px solid rgba(30,47,72,.5); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(124,58,237,.05); }
+    .td-date { font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
+    .td-val  { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent); }
+    .td-pct  { font-family: 'IBM Plex Mono', monospace; }
+    .delta-pos { color: var(--green); }
+    .delta-neg { color: var(--red); }
+    .delta-neu { color: var(--dim); }
+    .pct-bar { display: flex; align-items: center; gap: 8px; }
+    .mini-bar-bg { flex: 1; height: 6px; background: var(--bg3); border-radius: 100px; overflow: hidden; border: 1px solid var(--border); }
+    .mini-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--blue-mid), var(--accent)); }
+    .rank-num { font-family: 'IBM Plex Mono', monospace; font-size: .75rem; color: var(--dim); text-align: center; }
+    .rank-medal { font-size: 1rem; text-align: center; }
+
+    .section-divider { margin: 0 32px 8px; border: none; border-top: 1px solid var(--border); }
+
+    /* Tabs */
+    .tab-container { margin: 0 32px 0; }
+    .tab-header {
+      display: flex; gap: 4px; padding: 10px 14px 0;
+      background: var(--bg2);
+      border-radius: 14px 14px 0 0; border: 1px solid var(--border); border-bottom: none;
+      align-items: flex-end;
+    }
+    .tab-btn {
+      padding: 10px 20px; font-size: .8rem; font-weight: 600;
+      color: var(--dim); background: var(--bg3); border: 1px solid var(--border);
+      border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer;
+      transition: all .18s; font-family: 'Inter', sans-serif;
+      position: relative; bottom: -1px; letter-spacing: .01em;
+    }
+    .tab-btn:hover { color: var(--muted); background: rgba(124,58,237,.08); }
+    .tab-btn.active {
+      color: var(--accent); background: var(--bg2);
+      border-color: var(--border); border-bottom-color: var(--bg2);
+      box-shadow: 0 -2px 0 0 var(--accent);
+    }
+    .tab-btn .tab-icon { margin-right: 6px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .tab-body {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 14px 14px;
+      overflow: hidden; margin-bottom: 30px;
+    }
+    .tab-body h3 { font-size: .88rem; font-weight: 600; padding: 18px 22px 0; margin-bottom: 14px; }
+
+    /* Mapa */
+    #mapa-tarapaca { height: 540px; background: var(--bg3); }
+    .leaflet-container { background: #080f1a !important; font-family: 'Inter', sans-serif; }
+    .leaflet-control-zoom a { background: #1e2f48 !important; color: #94a3b8 !important; border-color: var(--border) !important; }
+    .leaflet-control-zoom a:hover { background: #2d3f5a !important; color: #c4b5fd !important; }
+    .leaflet-popup-content-wrapper {
+      background: #1e2f48; color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    }
+    .leaflet-popup-tip { background: #1e2f48; }
+    .leaflet-popup-content { margin: 12px 16px; }
+    .map-popup-title { font-weight: 600; font-size: .9rem; margin-bottom: 8px; color: var(--accent); }
+    .map-popup-row { display: flex; justify-content: space-between; gap: 24px; font-size: .8rem; margin: 3px 0; }
+    .map-popup-label { color: var(--muted); }
+    .map-popup-val { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--text); }
+    .map-popup-bar-wrap { margin-top: 8px; }
+    .map-popup-bar-bg { background: #0d1829; border-radius: 100px; height: 6px; overflow: hidden; }
+    .map-popup-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, #6d28d9, #c4b5fd); }
+    .map-legend {
+      position: absolute; bottom: 18px; right: 18px; z-index: 1000;
+      background: rgba(8,15,26,.93); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; font-size: .72rem;
+      backdrop-filter: blur(4px);
+    }
+    .map-legend-title { color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: .65rem; }
+    .map-legend-row { display: flex; align-items: center; gap: 7px; margin: 3px 0; color: var(--text); }
+    .map-legend-swatch { width: 14px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+
+    footer { border-top: 1px solid var(--border); text-align: center; padding: 18px; font-size: .75rem; color: var(--dim); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="back-link" href="../index.html">← Volver al compendio</a>
+    <div class="header-divider"></div>
+    <img class="logo" src="https://ceel-uc.github.io/Dashboards/logo_ceel.png" alt="CEEL UC" />
+    <div class="header-meta">
+      <a class="btn-proyecto" href="https://encuestas.uc.cl/?p=2011" target="_blank">
+        Ir a la página del proyecto ↗
+      </a>
+      <div class="header-meta-text">
+        <div class="proj">Región de Tarapacá · Terreno longitudinal</div>
+        <div class="name">Encuesta Longitudinal de Tarapacá</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero-band">
+    <p class="hero-label">Seguimiento de avance en campo</p>
+    <h1>Encuesta Longitudinal de Tarapacá</h1>
+    <p class="subtitle">Evolución de encuestas completadas respecto a la muestra objetivo de 4.000 encuestas · 7 comunas</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Muestra objetivo</div>
+      <div class="kpi-val muted">4.000</div>
+      <div class="kpi-sub">encuestas objetivo</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Última medición</div>
+      <div class="kpi-val purple">29,1%</div>
+      <div class="kpi-sub">4 de mayo 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Completadas</div>
+      <div class="kpi-val purple">1.000</div>
+      <div class="kpi-sub">código 110</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">
+        Variación total
+        <span class="info-btn" data-tip="Diferencia en puntos porcentuales entre la tasa de completitud de la última medición y la primera medición registrada (25 mar 2026).">i</span>
+      </div>
+      <div class="kpi-val green">+8,5 pts</div>
+      <div class="kpi-sub">desde 25 mar (20,6%)</div>
+    </div>
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Tasa de rechazo</div>
+      <div class="kpi-val red">21,1%</div>
+      <div class="kpi-sub">727 rechazos netos (211+212)</div>
+    </div>
+    <div class="kpi kpi-warn">
+      <div class="kpi-label">
+        Recuperados
+        <span class="info-btn" data-tip="Folios que en primera visita registraron rechazo (211 o 212) pero en una visita posterior lograron completar la encuesta (código 110).">i</span>
+      </div>
+      <div class="kpi-val amber">112</div>
+      <div class="kpi-sub">15,4% de folios con rechazo</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avance urbano</div>
+      <div class="kpi-val purple">25,6%</div>
+      <div class="kpi-sub">786 / 3.066 objetivo</div>
+      <div style="margin-top:10px"><div class="progress-bar-bg" style="height:6px"><div class="progress-bar-fill" style="width:25.6%"></div></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avance rural</div>
+      <div class="kpi-val purple">22,9%</div>
+      <div class="kpi-sub">214 / 934 objetivo</div>
+      <div style="margin-top:10px"><div class="progress-bar-bg" style="height:6px"><div class="progress-bar-fill" style="width:22.9%"></div></div></div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <h3>Avance acumulado de completadas</h3>
+      <p class="chart-sub">Evolución de encuestas completadas (código 110) respecto a la muestra objetivo de 4.000</p>
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:29.1%"></div>
+        </div>
+        <div class="progress-labels">
+          <span>Progreso global al 04 may — <strong style="color:var(--accent)">1.000 / 4.000 · 29,1%</strong></span>
+          <span>Meta: 4.000</span>
+        </div>
+      </div>
+      <canvas id="chartAcum" height="90"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Nuevas completadas por fecha</h3>
+      <p class="chart-sub">Incremento neto respecto a la medición anterior</p>
+      <canvas id="chartDelta" height="90"></canvas>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Resumen por fecha de medición</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total ID</th>
+          <th>Completadas</th>
+          <th>%</th>
+          <th>Δ comp.</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHistorica"></tbody>
+    </table>
+  </div>
+
+  <div class="tab-container">
+    <div class="tab-header">
+      <button class="tab-btn active" onclick="switchTab('tabla')">📋 Tabla por comuna</button>
+      <button class="tab-btn" onclick="switchTab('mapa')">🗺 Mapa de avance</button>
+    </div>
+    <div class="tab-body">
+      <!-- Panel tabla -->
+      <div id="panel-tabla" class="tab-panel active">
+        <h3>Detalle por comuna — última medición</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Comuna</th>
+              <th>Completadas</th>
+              <th>Rechazos</th>
+              <th>Recuperados</th>
+              <th>Urbano</th>
+              <th>Rural</th>
+              <th>% Total</th>
+            </tr>
+          </thead>
+          <tbody id="tablaComunas"></tbody>
+        </table>
+      </div>
+      <!-- Panel mapa -->
+      <div id="panel-mapa" class="tab-panel">
+        <div style="position:relative">
+          <div id="mapa-tarapaca"></div>
+          <div class="map-legend" id="map-legend-tar">
+            <div class="map-legend-title">% Avance total</div>
+            <div class="map-legend-row"><div class="map-legend-swatch" style="background:#1e1040"></div>&lt; 15%</div>
+            <div class="map-legend-row"><div class="map-legend-swatch" style="background:#4c1d95"></div>15 – 20%</div>
+            <div class="map-legend-row"><div class="map-legend-swatch" style="background:#7c3aed"></div>20 – 25%</div>
+            <div class="map-legend-row"><div class="map-legend-swatch" style="background:#a78bfa"></div>25 – 30%</div>
+            <div class="map-legend-row"><div class="map-legend-swatch" style="background:#c4b5fd"></div>&gt; 30%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card" style="margin-top:0">
+    <h3>Top encuestadoras — Tarapacá</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Encuestador/a</th>
+          <th>Completadas</th>
+          <th>Únicos visitados</th>
+          <th>Tasa rechazo</th>
+        </tr>
+      </thead>
+      <tbody id="tablaEncuestadores"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Dashboard de avance en terreno · Centro UC de Encuestas y Estudios Longitudinales
+  </footer>
+
+<script>
+const historia = [
+  { fecha: '25 mar', total: 1917, comp: 395,  pct: 20.6 },
+  { fecha: '26 mar', total: 1993, comp: 413,  pct: 20.7 },
+  { fecha: '30 mar', total: 2161, comp: 463,  pct: 21.4 },
+  { fecha: '31 mar', total: 2202, comp: 480,  pct: 21.8 },
+  { fecha: '01 abr', total: 2224, comp: 495,  pct: 22.3 },
+  { fecha: '02 abr', total: 2228, comp: 505,  pct: 22.7 },
+  { fecha: '07 abr', total: 2396, comp: 541,  pct: 22.6 },
+  { fecha: '08 abr', total: 2437, comp: 559,  pct: 22.9 },
+  { fecha: '09 abr', total: 3075, comp: 582,  pct: 18.9 },
+  { fecha: '14 abr', total: 3075, comp: 729,  pct: 23.7 },
+  { fecha: '16 abr', total: 3075, comp: 766,  pct: 24.9 },
+  { fecha: '20 abr', total: 3075, comp: 814,  pct: 26.5 },
+  { fecha: '23 abr', total: 3287, comp: 944,  pct: 23.6 },
+  { fecha: '29 abr', total: 3331, comp: 962,  pct: 28.9 },
+  { fecha: '04 may', total: 3441, comp: 1000, pct: 29.1 },
+];
+
+const comunas = [
+  { nombre: 'Iquique',       total: 1248, comp: 411, rech: 321, recup: 58, urb: { meta: 1497, comp: 358 }, rur: { meta: 100,  comp: 53  } },
+  { nombre: 'Alto Hospicio', total: 1147, comp: 306, rech: 253, recup: 33, urb: { meta: 1068, comp: 306 }, rur: { meta: 0,    comp: 0   } },
+  { nombre: 'Pozo Almonte',  total:  284, comp:  98, rech:  55, recup: 14, urb: { meta:  167, comp:  59 }, rur: { meta: 100,  comp: 39  } },
+  { nombre: 'Camiña',        total:  172, comp:  37, rech:  13, recup:  2, urb: { meta:    0, comp:   0 }, rur: { meta: 267,  comp: 37  } },
+  { nombre: 'Colchane',      total:  154, comp:  44, rech:  13, recup:  2, urb: { meta:    0, comp:   0 }, rur: { meta: 267,  comp: 44  } },
+  { nombre: 'Huara',         total:  205, comp:  49, rech:  34, recup:  1, urb: { meta:  167, comp:  37 }, rur: { meta: 100,  comp: 12  } },
+  { nombre: 'Pica',          total:  231, comp:  55, rech:  38, recup:  2, urb: { meta:  167, comp:  26 }, rur: { meta: 100,  comp: 29  } },
+];
+
+// Top encuestadoras — datos 04 may
+const encuestadores = [
+  { nombre: 'maria ines lobos pavez',              comp: 159, unicos: 1387, trechazo: 0.1298 },
+  { nombre: 'Jessenia nicol Silva  Estay',          comp: 146, unicos: 2381, trechazo: 0.0466 },
+  { nombre: 'Judith Alejandra Rozas  Quezada',     comp: 131, unicos: 2326, trechazo: 0.0752 },
+  { nombre: 'isabel andrea alvarez  roco',          comp: 118, unicos:  948, trechazo: 0.0021 },
+  { nombre: 'Maria Alicia Astudillo Jiménez',       comp:  81, unicos: 2214, trechazo: 0.0461 },
+  { nombre: 'Solange Carolina  Correa Aranguiz',    comp:  72, unicos: 1314, trechazo: 0.0464 },
+  { nombre: 'Silvia Beatriz González de Arrieta',   comp:  62, unicos: 2004, trechazo: 0.1023 },
+  { nombre: 'BERZA IVÓN BECERRA CARRASCO',          comp:  57, unicos:  875, trechazo: 0.0274 },
+].sort((a,b) => b.comp - a.comp).slice(0,8);
+
+// Tabla histórica
+const tbody = document.getElementById('tablaHistorica');
+historia.forEach((d, i) => {
+  const prev  = i > 0 ? historia[i-1].comp : null;
+  const delta = prev !== null ? d.comp - prev : null;
+  const dClass = delta === null ? 'delta-neu' : delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-neu';
+  const dStr   = delta === null ? '—' : (delta > 0 ? '+' : '') + delta;
+  tbody.innerHTML += `
+    <tr>
+      <td class="td-date">${d.fecha}</td>
+      <td>${d.total.toLocaleString('es-CL')}</td>
+      <td class="td-val">${d.comp.toLocaleString('es-CL')}</td>
+      <td class="td-pct">${d.pct.toFixed(1)}%</td>
+      <td class="${dClass}">${dStr}</td>
+    </tr>`;
+});
+
+// Tabla comunas
+const tbodyC = document.getElementById('tablaComunas');
+comunas.forEach(c => {
+  const pct = (c.comp / c.total * 100).toFixed(1);
+  const urbPct = c.urb.meta > 0 ? (c.urb.comp / c.urb.meta * 100) : 0;
+  const rurPct = c.rur.meta > 0 ? (c.rur.comp / c.rur.meta * 100) : 0;
+  const miniBar = (pct_val, label_comp, label_meta) => c.rur.meta === 0 && label_meta === c.rur.meta
+    ? `<span style="color:var(--dim);font-size:.72rem">n/a</span>`
+    : `<div class="pct-bar">
+        <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.min(pct_val,100)}%"></div></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--accent);min-width:38px">${pct_val.toFixed(1)}%</span>
+       </div>
+       <div style="font-size:.67rem;color:var(--dim);margin-top:2px">${label_comp} / ${label_meta}</div>`;
+  const urbCell = c.urb.meta > 0
+    ? `<div class="pct-bar"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.min(urbPct,100)}%"></div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--accent);min-width:38px">${urbPct.toFixed(1)}%</span></div><div style="font-size:.67rem;color:var(--dim);margin-top:2px">${c.urb.comp} / ${c.urb.meta}</div>`
+    : `<span style="color:var(--dim);font-size:.72rem">n/a</span>`;
+  const rurCell = c.rur.meta > 0
+    ? `<div class="pct-bar"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.min(rurPct,100)}%"></div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--accent);min-width:38px">${rurPct.toFixed(1)}%</span></div><div style="font-size:.67rem;color:var(--dim);margin-top:2px">${c.rur.comp} / ${c.rur.meta}</div>`
+    : `<span style="color:var(--dim);font-size:.72rem">n/a</span>`;
+  tbodyC.innerHTML += `
+    <tr>
+      <td>${c.nombre}</td>
+      <td class="td-val">${c.comp.toLocaleString('es-CL')}</td>
+      <td style="color:var(--red);font-family:'IBM Plex Mono',monospace">${c.rech}</td>
+      <td style="color:var(--amber);font-family:'IBM Plex Mono',monospace">${c.recup}</td>
+      <td>${urbCell}</td>
+      <td>${rurCell}</td>
+      <td>
+        <div class="pct-bar">
+          <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--accent);min-width:42px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+});
+
+// Tabla encuestadores
+const tbodyE = document.getElementById('tablaEncuestadores');
+encuestadores.forEach((e, i) => {
+  const medals = ['🥇','🥈','🥉'];
+  const rankStr = i < 3 ? `<td class="rank-medal">${medals[i]}</td>` : `<td class="rank-num">${i+1}</td>`;
+  const rechPct = (e.trechazo * 100).toFixed(1);
+  const rechColor = e.trechazo > 0.10 ? 'var(--red)' : e.trechazo > 0.06 ? 'var(--amber)' : 'var(--green)';
+  tbodyE.innerHTML += `
+    <tr>
+      ${rankStr}
+      <td>${e.nombre}</td>
+      <td class="td-val">${e.comp}</td>
+      <td style="color:var(--muted);font-family:'IBM Plex Mono',monospace">${e.unicos.toLocaleString('es-CL')}</td>
+      <td style="color:${rechColor};font-family:'IBM Plex Mono',monospace">${rechPct}%</td>
+    </tr>`;
+});
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+  if (name === 'mapa' && !window._mapInitTar) initMapTarapaca();
+}
+
+// ── MAPA TARAPACÁ — GeoJSON embebido (sin dependencia externa) ──
+function initMapTarapaca() {
+  window._mapInitTar = true;
+
+  const GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"NOM_COM":"Iquique"},"geometry":{"type":"Polygon","coordinates":[[[-70.19,-20.14],[-70.0,-20.1],[-69.95,-20.18],[-69.98,-20.31],[-70.12,-20.35],[-70.22,-20.28],[-70.19,-20.14]]]}},{"type":"Feature","properties":{"NOM_COM":"Alto Hospicio"},"geometry":{"type":"Polygon","coordinates":[[[-70.12,-20.2],[-69.9,-20.2],[-69.85,-20.3],[-69.9,-20.48],[-70.05,-20.55],[-70.18,-20.48],[-70.2,-20.35],[-70.12,-20.2]]]}},{"type":"Feature","properties":{"NOM_COM":"Pozo Almonte"},"geometry":{"type":"Polygon","coordinates":[[[-70.05,-20.55],[-69.9,-20.48],[-69.6,-20.55],[-69.4,-20.6],[-69.35,-20.8],[-69.45,-21.1],[-69.7,-21.25],[-70.05,-21.15],[-70.15,-20.9],[-70.1,-20.7],[-70.05,-20.55]]]}},{"type":"Feature","properties":{"NOM_COM":"Huara"},"geometry":{"type":"Polygon","coordinates":[[[-70.1,-19.6],[-69.8,-19.55],[-69.5,-19.6],[-69.2,-19.55],[-69.0,-19.7],[-68.9,-19.9],[-69.1,-20.1],[-69.4,-20.18],[-69.6,-20.15],[-69.9,-20.2],[-70.12,-20.2],[-70.18,-20.0],[-70.1,-19.6]]]}},{"type":"Feature","properties":{"NOM_COM":"Camiña"},"geometry":{"type":"Polygon","coordinates":[[[-69.4,-18.9],[-69.1,-18.85],[-68.8,-18.9],[-68.65,-19.1],[-68.7,-19.35],[-68.9,-19.5],[-69.2,-19.55],[-69.5,-19.6],[-69.6,-19.4],[-69.5,-19.1],[-69.4,-18.9]]]}},{"type":"Feature","properties":{"NOM_COM":"Colchane"},"geometry":{"type":"Polygon","coordinates":[[[-69.1,-18.85],[-68.8,-18.8],[-68.5,-18.85],[-68.5,-19.2],[-68.65,-19.4],[-68.8,-19.5],[-69.1,-19.45],[-69.2,-19.25],[-69.1,-18.85]]]}},{"type":"Feature","properties":{"NOM_COM":"Pica"},"geometry":{"type":"Polygon","coordinates":[[[-69.6,-20.15],[-69.4,-20.18],[-69.1,-20.1],[-68.9,-20.25],[-68.85,-20.55],[-69.0,-20.8],[-69.35,-20.8],[-69.4,-20.6],[-69.6,-20.55],[-69.8,-20.48],[-69.85,-20.3],[-69.9,-20.2],[-69.6,-20.15]]]}}]};
+
+  const comunaIdx = {};
+  comunas.forEach(c => { comunaIdx[c.nombre] = c; });
+
+  function pctColor(pct) {
+    if (pct >= 30) return '#c4b5fd';
+    if (pct >= 25) return '#a78bfa';
+    if (pct >= 20) return '#7c3aed';
+    if (pct >= 15) return '#4c1d95';
+    return '#1e1040';
+  }
+
+  const map = L.map('mapa-tarapaca', { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 13 }).addTo(map);
+
+  const geojsonLayer = L.geoJSON(GEOJSON, {
+    style: feature => {
+      const c = comunaIdx[feature.properties.NOM_COM];
+      const pct = c ? (c.comp / c.total * 100) : 0;
+      return { fillColor: pctColor(pct), fillOpacity: 0.78, color: '#c4b5fd', weight: 1.5, opacity: 0.7 };
+    },
+    onEachFeature: (feature, layer) => {
+      const c = comunaIdx[feature.properties.NOM_COM];
+      layer.on({
+        mouseover: e => {
+          e.target.setStyle({ fillOpacity: 0.95, weight: 2.5, color: '#e9d5ff' });
+          if (c) {
+            const pct    = (c.comp / c.total * 100).toFixed(1);
+            const urbPct = c.urb.meta > 0 ? (c.urb.comp / c.urb.meta * 100).toFixed(1) + '%' : 'n/a';
+            const rurPct = c.rur.meta > 0 ? (c.rur.comp / c.rur.meta * 100).toFixed(1) + '%' : 'n/a';
+            layer.bindTooltip(`
+              <div class="map-popup-title">${c.nombre}</div>
+              <div class="map-popup-row"><span class="map-popup-label">Avance total</span><span class="map-popup-val">${pct}%</span></div>
+              <div class="map-popup-row"><span class="map-popup-label">Urbano</span><span class="map-popup-val">${urbPct}</span></div>
+              <div class="map-popup-row"><span class="map-popup-label">Rural</span><span class="map-popup-val">${rurPct}</span></div>
+              <div class="map-popup-row"><span class="map-popup-label">Completadas</span><span class="map-popup-val">${c.comp} / ${c.total}</span></div>
+              <div class="map-popup-bar-wrap"><div class="map-popup-bar-bg"><div class="map-popup-bar-fill" style="width:${Math.min(pct,100)}%"></div></div></div>
+            `, { sticky: true, className: 'leaflet-popup-content-wrapper' }).openTooltip();
+          }
+        },
+        mouseout: e => { geojsonLayer.resetStyle(e.target); layer.closeTooltip(); },
+      });
+    }
+  }).addTo(map);
+
+  map.fitBounds(geojsonLayer.getBounds(), { padding: [30, 30] });
+
+  // Etiquetas de comunas
+  GEOJSON.features.forEach(feature => {
+    const coords = feature.geometry.coordinates[0];
+    const lats = coords.map(c => c[1]);
+    const lngs = coords.map(c => c[0]);
+    const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+    const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+    const c = comunaIdx[feature.properties.NOM_COM];
+    const pct = c ? (c.comp / c.total * 100).toFixed(1) : '–';
+    L.marker([centerLat, centerLng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:rgba(8,15,26,.78);border:1px solid rgba(196,181,253,.3);border-radius:6px;padding:3px 7px;font-family:'Inter',sans-serif;font-size:.65rem;font-weight:600;color:#e2e8f0;white-space:nowrap;text-align:center;pointer-events:none">${feature.properties.NOM_COM}<br><span style="color:#c4b5fd;font-size:.62rem">${pct}%</span></div>`,
+        iconAnchor: [40, 18]
+      })
+    }).addTo(map);
+  });
+}
+
+// Charts
+const labels = historia.map(d => d.fecha);
+const META = 4000;
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'Inter';
+
+new Chart(document.getElementById('chartAcum'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Completadas',
+        data: historia.map(d => d.comp),
+        borderColor: '#c4b5fd',
+        backgroundColor: 'rgba(196,181,253,.08)',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#c4b5fd',
+        pointRadius: 4,
+        tension: .35,
+        fill: true,
+      },
+      {
+        label: 'Meta objetivo (4.000)',
+        data: historia.map(() => META),
+        borderColor: 'rgba(71,85,105,.5)',
+        borderWidth: 1.5,
+        borderDash: [6,4],
+        pointRadius: 0,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#111c2e', borderColor: '#1e2f48', borderWidth: 1 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } }, min: 0, max: META + 300 }
+    }
+  }
+});
+
+const deltas = historia.map((d, i) => i === 0 ? d.comp : d.comp - historia[i-1].comp);
+new Chart(document.getElementById('chartDelta'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Nuevas completadas',
+      data: deltas,
+      backgroundColor: deltas.map(v => v >= 0 ? 'rgba(196,181,253,.7)' : 'rgba(248,113,113,.7)'),
+      borderColor:      deltas.map(v => v >= 0 ? '#c4b5fd' : '#f87171'),
+      borderWidth: 1.5,
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#111c2e', borderColor: '#1e2f48', borderWidth: 1 }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(30,47,72,.6)' }, ticks: { color: '#64748b', font: { size: 11 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
